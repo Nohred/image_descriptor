@@ -1,0 +1,23 @@
+# datasets y artefactos
+VeRi/
+deepfashion/
+artifacts/
+experiments/locate-anything.cpp/
+# pesos y modelos
+*.gguf
+*.pt
+*.onnx
+*.safetensors
+# python
+__pycache__/
+.venv/
+# latex
+# documentacion/
+planeacion/
+*.aux
+*.log
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz

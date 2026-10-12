@@ -1,0 +1,1 @@
+"""Guarda resultados en MongoDB."""
