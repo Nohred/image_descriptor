@@ -1,0 +1,41 @@
+seed: 20261012
+veri_root: VeRi
+count: 100
+canvas:
+  width: 640
+  height: 640
+backgrounds:
+  images: data/raw/coco/val2017
+  annotations: data/raw/coco/annotations/instances_val2017.json
+  output_root: data/backgrounds
+  preview_root: artifacts/background_preview
+  groups: [urbano, negativo_dificil, generico]
+  weights: {urbano: 0.4, negativo_dificil: 0.3, generico: 0.3}
+  excluded_classes: [car, motorcycle, bus, truck, train]
+  groups_classes:
+    urbano: [traffic light, stop sign, fire hydrant, parking meter, bench]
+    negativo_dificil: [person, bicycle]
+objects:
+  max_per_image: 1
+  max_iou: 0.05
+  placement_attempts: 50
+  horizontal_flip_probability: 0.5
+scale:
+  target_side_min: 32
+  target_side_max: 256
+size_categories:
+  small_max: 1024
+  medium_max: 9216
+source:
+  allow_train_identities: false
+options:
+  background_degradation: false
+  background_blur_radius: 0.6
+  background_jpeg_quality: 70
+  edge_smoothing: false
+  edge_radius: 0.75
+  full_image_brightness_contrast: false
+  brightness_factor: 1.0
+  contrast_factor: 1.0
+output:
+  root: data/synthetic_v1_coco

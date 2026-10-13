@@ -1,4 +1,4 @@
-"""CLI for generating the synthetic YOLO dataset."""
+"""CLI for generating paired Streetscapes synthetic variants."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ def main() -> None:
     args = parser.parse_args()
     config = yaml.safe_load(Path(args.config).read_text(encoding="utf-8"))
     manifest = generate(config)
-    print(f"Imágenes generadas: {len(manifest)}")
+    print(f"Imágenes matched generadas: {len(manifest)}")
 
 
 if __name__ == "__main__":

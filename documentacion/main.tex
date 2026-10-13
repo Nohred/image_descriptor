@@ -4,30 +4,432 @@
 \usepackage[spanish,es-tabla]{babel}
 \usepackage[margin=2.5cm]{geometry}
 \usepackage{lmodern}
+\usepackage{amsmath}
+\usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{longtable}
 \usepackage{tabularx}
 \usepackage{array}
 \usepackage{enumitem}
-\usepackage{xcolor}
 \usepackage[hidelinks]{hyperref}
 \setlength{\parskip}{0.5em}
 \setlength{\parindent}{0pt}
+\renewcommand{\arraystretch}{1.15}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcommand{\pend}[1]{\textbf{PENDIENTE:} #1}
 
-\title{Sistema de recuperación de imágenes por características}
-\author{}
-\date{}
+\title{Sistema de recuperaci\'on de im\'agenes por caracter\'isticas\\[0.3em]
+\large Planeaci\'on, datos y detecci\'on}
+\author{Juan Ulises Calderon Huerta}
+\date{12 de octubre de 2026}
 
 \begin{document}
 \maketitle
 \tableofcontents
-\input{secciones/01_objetivo_alcance}
-\input{secciones/02_equipo_pruebas}
-\input{secciones/03_datos}
-\input{secciones/04_deteccion_yolo}
-\input{secciones/05_descriptores}
-\input{secciones/06_base_datos}
-\input{secciones/07_locateanything}
-\input{secciones/08_resultados}
-\input{secciones/09_conclusiones}
+\newpage
+
+%--------------------------------------------------------------------
+\section{Objetivo y alcance}
+
+El proyecto estudia un sistema de recuperaci\'on de im\'agenes de veh\'iculos mediante
+descriptores visuales. Se comparan dos enfoques: (A) \emph{atributos fijos}, producidos
+por un clasificador multicabeza de color y tipo de veh\'iculo, y (B) \emph{descripciones
+generadas} por un modelo visi\'on--lenguaje. La localizaci\'on se realiza con YOLO26 en sus
+variantes \texttt{n} y \texttt{s}, y los resultados se guardar\'an en MongoDB. El dataset
+principal es VeRi-776; DeepFashion queda fuera del alcance actual. La fecha l\'imite del
+proyecto es el 9 de noviembre de 2026.
+
+\textbf{Incluido:} atributos fijos (color y tipo), descripci\'on generada, localizaci\'on con
+YOLO26, dataset sint\'etico para evaluar la detecci\'on, prueba secundaria con
+LocateAnything, base de datos con consultas por caracter\'isticas y comparaci\'on de calidad,
+latencia y memoria.
+
+\textbf{Fuera de alcance:} ajuste fino de modelos generativos, detector entrenado desde cero,
+b\'usqueda con embeddings y despliegue.
+
+%--------------------------------------------------------------------
+\section{Equipo de pruebas}
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{@{}ll@{}}
+\toprule
+Componente & Especificaci\'on \\
+\midrule
+CPU & Intel Core i7-10750H @ 2.60\,GHz \\
+GPU & NVIDIA GeForce RTX 2070 Max-Q (8\,GB de VRAM) \\
+RAM & 16\,GB \\
+Almacenamiento & SSD NVMe de 1\,TB \\
+\bottomrule
+\end{tabular}
+\caption{Equipo de pruebas.}
+\end{table}
+
+La generaci\'on del dataset sint\'etico debe poder ejecutarse sin GPU.
+
+%--------------------------------------------------------------------
+\section{Datos}
+
+\subsection{VeRi-776}
+
+VeRi es el dataset principal. Sus im\'agenes son recortes de veh\'iculos de c\'amaras de
+vigilancia, por lo que la caja de un veh\'iculo pegado en una escena sint\'etica es el
+rect\'angulo completo del recorte. Las anotaciones XML est\'an en codificaci\'on
+\texttt{gb2312} y el lector las decodifica de forma expl\'icita. No hay solapamiento de
+identidades entre \emph{train} y \emph{test}, el generador usa solo \emph{test} por defecto
+y en \emph{test} no hay ejemplos del tipo \texttt{mpv}.
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+Partici\'on & Im\'agenes & Identidades & Ancho med. & Alto med. & \'Area med. (px$^2$) \\
+\midrule
+train & 37\,746 & 575 & 221 & 192 & 41\,990 \\
+test  & 11\,579 & 200 & 222 & 195 & 42\,823 \\
+query &  1\,678 & 200 & 283 & 254 & 72\,339 \\
+\bottomrule
+\end{tabular}
+\caption{Particiones de VeRi. Medianas en p\'ixeles.}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{@{}lrrrrrrr@{}}
+\toprule
+Medida (test) & M\'in. & p5 & p25 & Mediana & p75 & p95 & M\'ax. \\
+\midrule
+Ancho (px)   & 55 & 117 & 171 & 222 & 288 & 457 & 917 \\
+Alto (px)    & 44 & 97 & 144 & 195 & 266 & 414 & 839 \\
+\'Area (px$^2$) & 2\,904 & 11\,967 & 25\,560 & 42\,823 & 76\,041 & 165\,222 & 674\,041 \\
+Ancho/alto   & 0.49 & 0.73 & 0.95 & 1.13 & 1.34 & 1.90 & 3.19 \\
+\bottomrule
+\end{tabular}
+\caption{Distribuci\'on de tama\~nos en la partici\'on de prueba (11\,579 im\'agenes).}
+\end{table}
+
+La estimaci\'on inicial de tama\~nos (50--900 px, mediana 283 y p95 cercano a 500)
+corresponde a la partici\'on \emph{query}, no a \emph{test}. Las estad\'isticas completas
+se generan en \texttt{artifacts/dataset\_stats/dataset\_stats.json}.
+
+\begin{table}[ht]
+\centering
+\begin{minipage}[t]{0.45\textwidth}
+\centering
+\begin{tabular}{@{}lr@{}}
+\toprule
+Color & Im\'agenes \\
+\midrule
+black & 3\,884 \\ white & 2\,520 \\ gray & 1\,822 \\ red & 1\,099 \\
+yellow & 760 \\ green & 716 \\ blue & 299 \\ brown & 189 \\
+golden & 172 \\ orange & 118 \\
+\bottomrule
+\end{tabular}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.45\textwidth}
+\centering
+\begin{tabular}{@{}lr@{}}
+\toprule
+Tipo & Im\'agenes \\
+\midrule
+sedan & 5\,100 \\ suv & 2\,455 \\ truck & 1\,830 \\ hatchback & 763 \\
+pickup & 677 \\ bus & 352 \\ van & 306 \\ estate & 96 \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\caption{Color y tipo en la partici\'on de prueba de VeRi.}
+\end{table}
+
+\subsection{Global Streetscapes}
+
+Global Streetscapes (NUS Urban Analytics Lab) reune im\'agenes de calle de Mapillary y
+KartaView. Se usaron los archivos \texttt{contextual.csv} y
+\texttt{metadata\_common\_attributes.csv}, con estos criterios: sin panor\'amicas,
+iluminaci\'on diurna, calidad buena, plataforma de conducci\'on, proyecci\'on en
+perspectiva y lado menor de al menos 640\,px. Se muestre\'o el 1\,\% de las filas que
+pasan el filtro, con semilla 0, solicitando 2\,500 filas para conservar 2\,000 v\'alidas.
+
+La descarga se hizo con el script oficial \texttt{download\_jpegs.py}, fuera de este
+repositorio y sin guardar tokens ni credenciales. La verificaci\'on registr\'o 2\,500
+seleccionadas, 2\,414 v\'alidas, 86 faltantes y 0 corruptas. En las 2\,414 v\'alidas, el
+lado menor m\'aximo es 4\,176\,px; se conservaron las primeras 2\,000 v\'alidas, cuyo
+m\'aximo es 3\,456\,px (1\,659 de Mapillary y 341 de KartaView).
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{@{}ll@{}}
+\toprule
+Atributo & Valores en las 2\,000 im\'agenes \\
+\midrule
+Clima & clear 1\,107; cloudy 636; snowy 227; rainy 26; foggy 4 \\
+Direcci\'on de vista & front/back 1\,643; side 357 \\
+Reflejo en parabrisas & s\'i 797; no 1\,203 \\
+Deslumbramiento & s\'i 24; no 1\,976 \\
+Plataforma, iluminaci\'on, calidad & driving surface, day, good (2\,000) \\
+Panor\'amica, proyecci\'on & no, perspective (2\,000) \\
+\bottomrule
+\end{tabular}
+\caption{Atributos contextuales del subconjunto de Streetscapes.}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{@{}lrrrrrrrr@{}}
+\toprule
+ & M\'in. & p5 & p25 & Mediana & p75 & p95 & p99 & M\'ax. \\
+\midrule
+Lado menor (px) & 720 & 1\,080 & 1\,080 & 1\,152 & 1\,536 & 2\,160 & 3\,024 & 3\,456 \\
+\bottomrule
+\end{tabular}
+\caption{Resoluci\'on de las 2\,000 im\'agenes de fondo conservadas.}
+\end{table}
+
+La licencia queda \emph{pendiente de verificar}: Hugging Face indica \texttt{cc-by-sa-4.0},
+el sitio del proyecto indica CC BY 4.0 y la licencia de las im\'agenes de origen no se ha
+verificado. VeRi es de uso no comercial, por lo que los datos se tratan como internos.
+
+\subsection{V1: fondos COCO (hist\'orico)}
+
+La V1 fue una prueba con COCO val2017: tres grupos de fondos (\texttt{urbano},
+\texttt{negativo\_dificil} y \texttt{generico}), exclusi\'on de im\'agenes con \texttt{car},
+\texttt{motorcycle}, \texttt{bus}, \texttt{truck} o \texttt{train}, y 45 fondos en total
+(4, 18 y 23). Gener\'o 100 PNG de $640\times640$ con etiquetas YOLO y manifiesto JSONL.
+Sus fondos y resultados ya no se conservan en el \'arbol de datos; esta secci\'on guarda el
+registro experimental, no una ruta operativa.
+
+COCO se abandon\'o por tres razones: algunas escenas no ten\'ian relaci\'on con veh\'iculos
+(gatos, cocinas); solo se obtuvieron 45 fondos; y los umbrales de tama\~no de COCO no
+describen bien este lienzo, ya que $96^2$ px$^2$ es el 2.25\,\% de $640^2$ px$^2$ y
+veh\'iculos marcados como ``grande'' se ve\'ian peque\~nos. La hip\'otesis de que el filtro de
+lado menor $\geq 640$ explica la escasez de fondos (las im\'agenes de COCO miden
+alrededor de 640\,px en su lado mayor) no se ha confirmado.
+
+\subsection{Generador V2}
+
+La V2 usa un fondo de Streetscapes por escena, sin collage. En el modo
+\texttt{resize\_crop} el fondo se escala para cubrir el lienzo y se recorta una ventana
+cuadrada aleatoria; en \texttt{native\_crop} se toma una ventana de $640\times640$ sin
+redimensionar. El lienzo es de $640\times640$ p\'ixeles y las im\'agenes se guardan en PNG.
+
+El veh\'iculo es un recorte rectangular completo de VeRi (identidades de \emph{test}). La
+fracci\'on objetivo del \'area del lienzo se muestrea de forma uniforme entre 40\,\% y
+60\,\%, y el recorte se reescala con
+\[
+  s=\sqrt{A_{\text{objetivo}}/A_{\text{original}}},
+\]
+ampliando o reduciendo, sin tope por defecto y con una sola operaci\'on de remuestreo. Si
+por su relaci\'on de aspecto un recorte no cabe en el lienzo, se rechaza y se prueba otro. No
+se repite ninguna imagen de VeRi dentro de una ejecuci\'on, y hay un veh\'iculo por escena.
+
+Se generan dos variantes con id\'entica geometr\'ia: \texttt{matched}, que desenfoca el
+fondo con factor $b=\min(s,4)$ (se reduce el fondo a $1/b$ y se vuelve a ampliar), y
+\texttt{control}, sin desenfoque. El veh\'iculo nunca se desenfoca. En ambas variantes se
+aplica un gradiente alfa lineal de 5--10\,px hacia adentro en los cuatro bordes del
+recorte, limitado al 15\,\% de su lado menor. La etiqueta sigue siendo el rect\'angulo
+completo del recorte.
+
+Cada variante est\'a en \texttt{data/synthetic/matched/} o \texttt{data/synthetic/control/}
+y contiene \texttt{images/}, \texttt{labels/}, \texttt{data.yaml} y
+\texttt{manifest.jsonl}. El manifiesto registra el fondo y sus atributos, la ventana de
+recorte, el veh\'iculo, los tama\~nos, la fracci\'on, la escala, el factor de desenfoque,
+el gradiente, la posici\'on, el reflejo, la semilla y los rechazos.
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{@{}lrrrrrrr@{}}
+\toprule
+ & M\'in. & p5 & p25 & Mediana & p75 & p95 & M\'ax. \\
+\midrule
+Escala $s$ & 0.71 & 1.17 & 1.82 & 2.35 & 3.10 & 4.64 & 7.19 \\
+Fracci\'on de \'area & 0.401 & 0.407 & 0.466 & 0.509 & 0.561 & 0.588 & 0.596 \\
+\bottomrule
+\end{tabular}
+\caption{Distribuci\'on observada en las 100 escenas de cada variante (id\'entica en
+\texttt{matched} y \texttt{control}). La fracci\'on media es 0.507.}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+Rango de $s$ & $\leq 1$ & $(1,2]$ & $(2,3]$ & $(3,4]$ & $>4$ \\
+\midrule
+Escenas & 3 & 28 & 41 & 18 & 10 \\
+\bottomrule
+\end{tabular}
+\caption{Escenas por rango de ampliaci\'on. En \texttt{matched}, 10 escenas (10\,\%)
+alcanzan el tope de desenfoque $b=4$; en \texttt{control}, ninguna aplica desenfoque. Hubo
+3 rechazos por relaci\'on de aspecto.}
+\end{table}
+
+\subsection{Limitaciones y riesgos}
+\begin{itemize}[noitemsep]
+  \item Los veh\'iculos que ya aparecen en los fondos no se filtran ni se etiquetan. Si YOLO
+        los detecta, pueden contarse como falsos positivos.
+  \item La ampliaci\'on necesaria para ocupar 40--60\,\% deja al veh\'iculo m\'as borroso que
+        el fondo; el desenfoque dirigido (\texttt{matched}) y la variante de control sirven
+        para medir este desajuste.
+  \item El 39.9\,\% de las im\'agenes de fondo (797 de 2\,000) tiene reflejo en el parabrisas.
+  \item La etiqueta es el rect\'angulo completo del recorte, con su margen de fondo original
+        y el borde suavizado, por lo que el IoU m\'aximo realista queda por debajo de 1.
+  \item No hay m\'ascaras ni collage. Las licencias requieren verificaci\'on.
+\end{itemize}
+
+\subsection{Reproducibilidad}
+
+La descarga con el script oficial se ejecuta manualmente y fuera del repositorio. Ning\'un
+comando de esta secci\'on incluye credenciales.
+
+\begin{verbatim}
+python scripts/streetscapes_tools.py select --seed 0 \
+    --candidate-frac 0.01 --n 2000 --oversample 1.25
+python scripts/streetscapes_tools.py verify --keep 2000
+python scripts/prepare_backgrounds_streetscapes.py
+python scripts/make_synthetic.py --config configs/synthetic.yaml
+python scripts/preview_synthetic.py
+python scripts/dataset_stats.py
+python scripts/run_detection.py --models n s \
+    --data-variants matched control
+\end{verbatim}
+
+%--------------------------------------------------------------------
+\section{Registro de decisiones}
+
+Todas las decisiones se tomaron el 12 de octubre de 2026.
+
+{\small
+\begin{longtable}{@{}p{0.9cm}p{4.6cm}p{7.2cm}p{1.8cm}@{}}
+\toprule
+ID & Decisi\'on & Motivo y alternativas descartadas & Estado \\
+\midrule
+\endhead
+D01 & VeRi es el dataset principal; se usan recortes completos de \emph{test}. & Evitar fuga de informaci\'on. Alternativas: usar \emph{train}; m\'ascaras. & Decidido \\
+D02 & Lienzo de $640\times640$. & Tama\~no est\'andar para el detector. & Decidido \\
+D03 & Abandonar COCO como fondo. & Escenas incoherentes, 45 fondos y umbrales de tama\~no inadecuados. Alternativa: mantener COCO. & Decidido \\
+D04 & Forzar 40--60\,\% del \'area del lienzo. & La mediana de \emph{test} ocupa 10.5\,\% del lienzo y requiere ampliaci\'on. Alternativa: tama\~no sin forzar. & Decidido \\
+D05 & Usar Global Streetscapes. & Mayor coherencia de escenas urbanas. Alternativa: COCO. & Decidido \\
+D06 & Filtros contextuales y muestreo de Streetscapes. & Escenas diurnas, de calidad buena, de conducci\'on y en perspectiva. & Decidido \\
+D07 & Conservar 2\,000 im\'agenes v\'alidas. & 2\,414 v\'alidas de 2\,500; 86 faltantes; 0 corruptas; lado menor m\'aximo 4\,176 en las v\'alidas y 3\,456 en las 2\,000 conservadas. & Decidido \\
+D08 & No filtrar veh\'iculos del fondo. & Riesgo conocido de falsos positivos. Alternativas: segmentar o excluir. & Decidido \\
+D09 & Un recorte de calle por escena. & Evitar collage. & Decidido \\
+D10 & Desenfoque \texttt{matched} (tope 4) y variante \texttt{control}. & Igualar el desajuste de resoluci\'on y poder medir su efecto. Alternativa: desenfoque siempre. & Decidido \\
+D11 & Gradiente alfa de 5--10\,px. & Reducir el borde artificial sin cambiar la caja. Alternativas: sin gradiente; m\'ascaras. & Decidido \\
+D12 & Licencia y veh\'iculos de fondo. & Licencias discrepantes y objetos sin etiquetar. Resolver antes de los resultados finales. & Pendiente \\
+D13 & Evaluar solo el veh\'iculo detectado m\'as grande por imagen. & Se conserva la detecci\'on de mayor \'area con confianza $\geq 0.25$ y se compara con la etiqueta; las dem\'as se cuentan aparte. Alternativa: todos los objetos. & Decidido \\
+\bottomrule
+\end{longtable}
+}
+
+%--------------------------------------------------------------------
+\section{Detecci\'on con YOLO26}
+
+Se usan YOLO26n y YOLO26s (pesos \texttt{yolo26n.pt} y \texttt{yolo26s.pt}) para localizar
+veh\'iculos. Las clases \texttt{car}, \texttt{bus} y \texttt{truck} de COCO se tratan como
+\texttt{vehicle}, la clase \'unica del dataset sint\'etico.
+
+\subsection{Protocolo de evaluaci\'on}
+\begin{enumerate}[noitemsep]
+  \item Se ejecuta el modelo una vez por imagen con confianza m\'inima 0.05 y se guardan
+        todas las detecciones de veh\'iculo.
+  \item Se descartan las de confianza menor a 0.25 y se conserva \emph{solo la de mayor
+        \'area}.
+  \item Se calcula el IoU contra la caja etiquetada.
+  \item Las dem\'as detecciones no se pierden: se cuentan por imagen como detecciones extra.
+\end{enumerate}
+
+\textbf{M\'etricas.} Tasa de detecci\'on (im\'agenes con predicci\'on); recall a IoU 0.5 y
+0.75 (las im\'agenes sin predicci\'on cuentan como fallo); IoU medio (0 si no hay
+predicci\'on); AP50 y AP promedio de 0.5 a 0.95, calculadas con una sola predicci\'on por
+imagen (por tanto, no comparables con el mAP publicado de COCO); detecciones extra por
+imagen; latencia de inferencia por imagen; y pico de VRAM asignada por PyTorch.
+
+%--------------------------------------------------------------------
+\section{Descriptores}
+
+\subsection{Atributos fijos}
+\pend{arquitectura, entrenamiento y resultados del clasificador multicabeza de color y tipo.}
+
+\subsection{Descripci\'on generativa}
+\pend{modelo visi\'on--lenguaje, instrucciones, normalizaci\'on y evaluaci\'on.}
+
+%--------------------------------------------------------------------
+\section{Base de datos}
+
+MongoDB (probable), con un documento por objeto detectado.
+\pend{esquema de documentos, \'indices y consultas.}
+
+%--------------------------------------------------------------------
+\section{LocateAnything}
+
+Prueba secundaria con el modelo reducido \texttt{locate-anything-q8\_0} en GPU, como
+alternativa de localizaci\'on frente a YOLO26. Su salida es un JSON con cajas y etiquetas,
+y una imagen anotada; su calidad depende del tama\~no del modelo, de la cuantizaci\'on y del
+\emph{prompt}.
+\pend{configuraci\'on, datos de prueba y comparaci\'on con YOLO26.}
+
+%--------------------------------------------------------------------
+\section{Resultados}
+
+\subsection{Detecci\'on con YOLO26 sobre el dataset sint\'etico}
+
+Evaluaci\'on sobre las 100 escenas de cada variante, con confianza m\'inima 0.25 y
+selecci\'on del veh\'iculo m\'as grande.
+
+\begin{table}[ht]
+\centering
+\small
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{}llrrrrrrrrr@{}}
+\toprule
+Modelo & Datos & Detecci\'on & R@0.5 & R@0.75 & IoU medio & AP50 & AP50--95 & Extra & ms & VRAM (MB) \\
+\midrule
+YOLO26n & matched & 0.920 & 0.830 & 0.700 & 0.706 & 0.765 & 0.484 & 1.50 & 2.89 & 227 \\
+YOLO26n & control & 0.960 & 0.870 & 0.720 & 0.732 & 0.823 & 0.509 & 1.65 & 2.31 & 227 \\
+YOLO26s & matched & 0.980 & 0.920 & 0.780 & 0.783 & 0.881 & 0.563 & 1.79 & 4.65 & 438 \\
+YOLO26s & control & 0.990 & 0.900 & 0.770 & 0.765 & 0.864 & 0.549 & 2.09 & 4.51 & 438 \\
+\bottomrule
+\end{tabular}}
+\caption{Resultados de detecci\'on. ``Extra'' es la media de detecciones adicionales por
+imagen; ``ms'' es la inferencia media por imagen.}
+\end{table}
+
+\textbf{Lectura.} YOLO26s supera a YOLO26n en recall, IoU y AP, con una inferencia entre 1.6
+y 2 veces m\'as lenta y casi el doble de memoria. Con 100 im\'agenes por variante, una
+imagen vale un punto porcentual y el error t\'ipico de un recall cercano a 0.85 ronda los 3
+a 4 puntos, as\'i que las diferencias entre \texttt{matched} y \texttt{control} (1 a 4
+im\'agenes) no permiten concluir nada sobre el efecto del desenfoque. Parte de la ca\'ida
+entre R@0.5 y R@0.75 se debe a que la etiqueta incluye el margen del recorte de VeRi, por lo
+que el IoU m\'aximo realista es menor que 1. Las detecciones extra (1.5 a 2.1 por imagen)
+reflejan los veh\'iculos reales del fondo, no etiquetados.
+
+\pend{repetir con al menos 1\,000 im\'agenes por variante, comparaci\'on pareada imagen a
+imagen, resultados por rango de escala y mediciones de latencia con calentamiento.}
+
+\subsection{Resto de resultados}
+\pend{resultados de descriptores, base de datos y LocateAnything.}
+
+%--------------------------------------------------------------------
+\section{Bit\'acora de experimentos}
+
+Todas las entradas corresponden al 12 de octubre de 2026.
+
+{\small
+\begin{longtable}{@{}p{1.8cm}p{4.2cm}p{9.5cm}@{}}
+\toprule
+ID & Experimento & Configuraci\'on y resultado \\
+\midrule
+\endhead
+V1 & Dataset sint\'etico con fondos COCO & COCO val2017, 45 fondos, 100 PNG de $640\times640$, tama\~no por lado mayor log-uniforme sin ampliar. Abandonado (secci\'on 3.3). Huella SHA-256 del manifiesto: 67f2e6d0573f86708246d0a6\ldots \\
+V2-m & Dataset sint\'etico V2, variante \texttt{matched} & 2\,000 fondos de Streetscapes, 100 escenas, 40--60\,\% de \'area, desenfoque $b=\min(s,4)$, gradiente 5--10\,px. Huella SHA-256 del manifiesto: ba41206620e409c6\ldots \\
+V2-c & Dataset sint\'etico V2, variante \texttt{control} & Misma geometr\'ia que \texttt{matched}, sin desenfoque de fondo. Huella SHA-256 del manifiesto: d6fbcd523028c68b\ldots \\
+DET-1 & Detecci\'on YOLO26n y YOLO26s & Evaluaci\'on con el veh\'iculo m\'as grande (confianza $\geq 0.25$) sobre \texttt{matched} y \texttt{control}; resultados en la Tabla de la secci\'on 9. \\
+\bottomrule
+\end{longtable}
+}
+
+%--------------------------------------------------------------------
+\section{Conclusiones}
+
+\pend{conclusiones, limitaciones observadas y trabajo futuro.}
+
 \end{document}

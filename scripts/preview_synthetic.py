@@ -1,49 +1,57 @@
-"""Draw labels over representative synthetic images."""
+"""Create side-by-side previews for matched and control V2 variants."""
 
 from __future__ import annotations
 
 import argparse
 import json
-from collections import defaultdict
 from pathlib import Path
 
 from PIL import Image, ImageDraw
 
 
+def _read(path: Path) -> dict[str, dict]:
+    return {
+        item["image_id"]: item
+        for item in (json.loads(line) for line in path.read_text(encoding="utf-8").splitlines())
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--manifest", default="data/synthetic/manifest.jsonl")
-    parser.add_argument("--output", default="artifacts/synthetic_preview")
-    parser.add_argument("--per-group", type=int, default=3)
+    parser.add_argument("--root", default="data/synthetic")
+    parser.add_argument("--output", default="artifacts/synthetic_preview_v2")
+    parser.add_argument("--per-case", type=int, default=3)
     args = parser.parse_args()
-    manifest_path = Path(args.manifest)
-    if not manifest_path.is_file():
-        raise FileNotFoundError(f"No se encontró el manifiesto sintético: {manifest_path}")
-    groups: dict[tuple[str, str], list[dict]] = defaultdict(list)
-    for line in manifest_path.read_text(encoding="utf-8").splitlines():
-        item = json.loads(line)
-        for obj in item["objects"]:
-            key = (item["background"]["group"], obj["size_category"])
-            if len(groups[key]) < args.per_group:
-                groups[key].append(item)
+    root = Path(args.root)
+    matched = _read(root / "matched/manifest.jsonl")
+    control = _read(root / "control/manifest.jsonl")
+    cases = {"s_bajo": [], "s_medio": [], "s_alto": []}
+    for image_id, item in matched.items():
+        scale = item["vehicle"]["scale"]
+        key = "s_bajo" if scale <= 1 else "s_medio" if scale <= 4 else "s_alto"
+        if len(cases[key]) < args.per_case:
+            cases[key].append(image_id)
     output = Path(args.output)
     output.mkdir(parents=True, exist_ok=True)
-    written: set[str] = set()
-    for items in groups.values():
-        for item in items:
-            if item["image_id"] in written:
-                continue
-            written.add(item["image_id"])
-            with Image.open(item["file"]) as source:
-                image = source.convert("RGB")
-            draw = ImageDraw.Draw(image)
-            for obj in item["objects"]:
-                x, y = obj["position"]["x"], obj["position"]["y"]
-                width, height = obj["final_size"]["width"], obj["final_size"]["height"]
+    for case, image_ids in cases.items():
+        for image_id in image_ids:
+            left_item, right_item = matched[image_id], control[image_id]
+            with Image.open(left_item["file"]) as left_source:
+                left = left_source.convert("RGB")
+            with Image.open(right_item["file"]) as right_source:
+                right = right_source.convert("RGB")
+            for image, item in ((left, left_item), (right, right_item)):
+                draw = ImageDraw.Draw(image)
+                vehicle = item["vehicle"]
+                x, y = vehicle["position"]["x"], vehicle["position"]["y"]
+                width, height = vehicle["final_size"]["width"], vehicle["final_size"]["height"]
                 draw.rectangle((x, y, x + width, y + height), outline="red", width=3)
-                draw.text((x + 3, y + 3), obj["size_category"], fill="yellow")
-            image.save(output / f"{item['image_id']}.png")
-    print(f"Vistas previas: {len(written)}")
+                draw.text((x + 4, y + 4), f"s={vehicle['scale']:.2f}", fill="yellow")
+            combined = Image.new("RGB", (left.width * 2, left.height))
+            combined.paste(left, (0, 0))
+            combined.paste(right, (left.width, 0))
+            combined.save(output / f"{case}_{image_id}.png")
+    print({case: len(image_ids) for case, image_ids in cases.items()})
 
 
 if __name__ == "__main__":
