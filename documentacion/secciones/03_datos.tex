@@ -1,0 +1,41 @@
+\section{Datos}
+
+\subsection{VeRi-776}
+
+El repositorio contiene las particiones \texttt{train}, \texttt{test} y
+\texttt{query}, junto con anotaciones XML de color, tipo, identidad y cámara.
+Los XML se leen decodificando explícitamente \texttt{gb2312}.
+
+La partición de prueba contiene 200 identidades y se usa por defecto como
+fuente de vehículos para evitar fuga de información. La partición de
+entrenamiento solo se habilita mediante una opción explícita.
+
+\subsection{Fondos COCO}
+
+Los fondos se leen de COCO val2017 descargado manualmente en
+\texttt{data/raw/coco/}. Se excluyen imágenes que contengan automóvil,
+motocicleta, autobús, camión o tren. Las restantes se agrupan, por prioridad,
+en \texttt{urbano}, \texttt{negativo\_dificil} y \texttt{generico}.
+
+\subsection{Dataset sintético}
+
+El generador usa un lienzo configurable de 640 por 640 píxeles y guarda PNG
+sin pérdida, etiquetas YOLO de una sola clase (\texttt{vehicle}) y un
+manifiesto JSONL. Selecciona fondos con proporciones configurables, recorta un
+cuadrado y lo redimensiona al lienzo.
+
+El tamaño objetivo del vehículo se muestrea con distribución log-uniforme y
+se limita al tamaño original para no ampliar los recortes. Cada recorte recibe
+una sola operación de remuestreo de alta calidad; el reflejo horizontal se
+aplica en la misma etapa de transformación. Por defecto no se aplican filtros
+al vehículo, degradación al fondo ni cambios de brillo o contraste.
+
+Las categorías por área final siguen umbrales COCO configurables: pequeño
+($<32^2$), mediano ($32^2$--$96^2$) y grande ($>96^2$). El manifiesto registra
+la imagen, identidad, atributos heredados, tamaños, escala, posición, reflejo,
+grupo de fondo, opciones y semilla.
+
+Limitaciones actuales: no hay máscaras; el rectángulo conserva parte del fondo
+original de VeRi y puede producir bordes artificiales. Además, el desajuste de
+calidad entre vehículo y fondo puede crear un atajo para el detector. Las
+máscaras quedan como punto de extensión futuro.

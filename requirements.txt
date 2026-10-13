@@ -1,1 +1,5 @@
-# Completar al elegir versiones
+# Dependencias mínimas para el pipeline de datasets sintéticos
+numpy
+Pillow
+PyYAML
+pandas
