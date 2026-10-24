@@ -1,24 +1,79 @@
-# datasets y artefactos
-data/
-VeRi/
-deepfashion/
-artifacts/
-experiments/locate-anything.cpp/
-# pesos y modelos
-*.gguf
+### Datasets (mantener la estructura con .gitkeep, ignorar contenido)
+
+# Streetscapes
+**/streetscapes/*
+!**/streetscapes/.gitkeep
+
+# VeRi 
+**/VeRi/*
+!**/VeRi/.gitkeep
+
+# Synthetic dataset
+**/synthetic_dataset/*
+!**/synthetic_dataset/.gitkeep
+
+# Alias por si algún día cambia el nombre (typo común)
+**/syntethic_dataset/*
+!**/syntethic_dataset/.gitkeep
+
+### Modelos y artefactos de entrenamiento (NO subir)
+
+# Pesos PyTorch / YOLO
 *.pt
+*.pth
 *.onnx
+*.ckpt
 *.safetensors
-# python
+
+# Salidas de entrenamiento de YOLO
+**/runs/**
+**/*.cache
+
+# CSVs y figuras generadas por el pipeline de features
+src/feature_extractor/data/*.csv
+src/feature_extractor/data/*.png
+
+# Metadata autogenerada de datasets
+**/*_metadata.csv
+
+### Python
 __pycache__/
+*.py[cod]
+*.pyd
+*.so
+.Python
+*.egg-info/
+build/
+dist/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+.coverage
+htmlcov/
+
+### Entornos y secretos
+.env
+.env.*
+!.env.example
 .venv/
-# latex
-# documentacion/
-planeacion/
-*.aux
+venv/
+env/
+
+### IDE y sistema
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+### Jupyter
+.ipynb_checkpoints/
+
+### Logs y temporales
 *.log
-*.out
-*.toc
-*.fls
-*.fdb_latexmk
-*.synctex.gz
+*.tmp
+*.temp
