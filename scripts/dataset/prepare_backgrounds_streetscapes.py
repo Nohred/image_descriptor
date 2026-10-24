@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import argparse
 import json
 import random
 from collections import Counter
@@ -12,18 +11,19 @@ from PIL import Image, ImageDraw
 import pandas as pd
 
 
+# Configuración editable.
+DOWNLOADED_CSV = "data/raw/streetscapes/downloaded.csv"
+SELECTED_CSV = "data/raw/streetscapes/selected.csv"
+EXCLUSION_FILE = None  # Ruta a un archivo con un UUID por línea; None no excluye.
+MANIFEST_PATH = "data/backgrounds/streetscapes_manifest.jsonl"
+PREVIEW_DIR = "artifacts/background_preview/streetscapes"
+SAMPLE_SIZE = 24  # Número de fondos por source en cada hoja de contactos.
+SEED = 0
+
+
 def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--downloaded", default="data/raw/streetscapes/downloaded.csv")
-    parser.add_argument("--selected", default="data/raw/streetscapes/selected.csv")
-    parser.add_argument("--exclude", default=None)
-    parser.add_argument("--manifest", default="data/backgrounds/streetscapes_manifest.jsonl")
-    parser.add_argument("--preview", default="artifacts/background_preview/streetscapes")
-    parser.add_argument("--sample-size", type=int, default=24)
-    parser.add_argument("--seed", type=int, default=0)
-    args = parser.parse_args()
-    downloaded = Path(args.downloaded)
-    selected = Path(args.selected)
+    downloaded = Path(DOWNLOADED_CSV)
+    selected = Path(SELECTED_CSV)
     for path in (downloaded, selected):
         if not path.is_file():
             raise FileNotFoundError(f"No se encontró el CSV de Streetscapes: {path}")
@@ -36,8 +36,8 @@ def main() -> None:
     if "uuid" not in contexts:
         raise ValueError("selected.csv no contiene la columna uuid")
     excluded = set()
-    if args.exclude:
-        exclusion_path = Path(args.exclude)
+    if EXCLUSION_FILE:
+        exclusion_path = Path(EXCLUSION_FILE)
         if not exclusion_path.is_file():
             raise FileNotFoundError(f"No se encontró el archivo de exclusión: {exclusion_path}")
         excluded = {line.strip() for line in exclusion_path.read_text().splitlines() if line.strip()}
@@ -73,17 +73,17 @@ def main() -> None:
             "attributes": attributes,
             "license_note": "pendiente de verificar",
         })
-    manifest = Path(args.manifest)
+    manifest = Path(MANIFEST_PATH)
     manifest.parent.mkdir(parents=True, exist_ok=True)
     with manifest.open("w", encoding="utf-8") as handle:
         for record in records:
             handle.write(json.dumps(record, ensure_ascii=False) + "\n")
-    rng = random.Random(args.seed)
+    rng = random.Random(SEED)
     by_source: dict[str, list[dict]] = {}
     for record in records:
         by_source.setdefault(record["source"], []).append(record)
     for source, items in by_source.items():
-        selected_items = rng.sample(items, min(args.sample_size, len(items)))
+        selected_items = rng.sample(items, min(SAMPLE_SIZE, len(items)))
         sheet = Image.new("RGB", (720, 4 * 200), "white")
         draw = ImageDraw.Draw(sheet)
         for index, item in enumerate(selected_items):
@@ -94,7 +94,7 @@ def main() -> None:
             y = (index // 3) * 200
             sheet.paste(thumb, (x + (240 - thumb.width) // 2, y))
             draw.text((x + 4, y + 174), item["uuid"], fill="black")
-        output = Path(args.preview)
+        output = Path(PREVIEW_DIR)
         output.mkdir(parents=True, exist_ok=True)
         sheet.save(output / f"{source.lower()}.jpg", quality=95)
         print(f"{source}: {len(items)}")

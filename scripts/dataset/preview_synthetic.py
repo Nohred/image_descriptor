@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
-import argparse
 import json
 from pathlib import Path
 
 from PIL import Image, ImageDraw
+
+
+# Configuración editable.
+DATA_ROOT = "data/synthetic"
+OUTPUT_DIR = "artifacts/synthetic_preview_v2"
+PER_CASE = 3  # Número de ejemplos por caso: s_bajo, s_medio y s_alto.
 
 
 def _read(path: Path) -> dict[str, dict]:
@@ -17,21 +22,16 @@ def _read(path: Path) -> dict[str, dict]:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--root", default="data/synthetic")
-    parser.add_argument("--output", default="artifacts/synthetic_preview_v2")
-    parser.add_argument("--per-case", type=int, default=3)
-    args = parser.parse_args()
-    root = Path(args.root)
+    root = Path(DATA_ROOT)
     matched = _read(root / "matched/manifest.jsonl")
     control = _read(root / "control/manifest.jsonl")
     cases = {"s_bajo": [], "s_medio": [], "s_alto": []}
     for image_id, item in matched.items():
         scale = item["vehicle"]["scale"]
         key = "s_bajo" if scale <= 1 else "s_medio" if scale <= 4 else "s_alto"
-        if len(cases[key]) < args.per_case:
+        if len(cases[key]) < PER_CASE:
             cases[key].append(image_id)
-    output = Path(args.output)
+    output = Path(OUTPUT_DIR)
     output.mkdir(parents=True, exist_ok=True)
     for case, image_ids in cases.items():
         for image_id in image_ids:

@@ -1,35 +1,63 @@
+# Semilla para obtener resultados reproducibles.
 seed: 20261012
+# Directorio raíz del conjunto de datos VeRi.
 veri_root: VeRi
-count: 100
+# Número de imágenes sintéticas que se generarán.
+count: 37778
 canvas:
+  # Ancho del lienzo de salida, en píxeles.
   width: 640
+  # Alto del lienzo de salida, en píxeles.
   height: 640
 backgrounds:
+  # Archivo JSONL que contiene el manifiesto de fondos disponibles.
   manifest: data/backgrounds/streetscapes_manifest.jsonl
+  # Método usado para adaptar cada fondo al lienzo.
   mode: resize_crop
 background:
+  # Estrategia para igualar el desenfoque del fondo al de la imagen.
   blur_mode: matched
+  # Límite máximo del factor de desenfoque aplicado.
   blur_factor_cap: 4.0
 source:
+  # Indica si se pueden usar identidades presentes en el conjunto de entrenamiento.
   allow_train_identities: false
 size:
+  # Criterio usado para determinar el tamaño del vehículo.
   size_mode: area_fraction
-  area_fraction_range: [0.40, 0.60]
+  # Rango de fracción del área del lienzo que ocupará el vehículo.
+  area_fraction_range: [0.20, 0.40]
+  # Rango de tamaño del lado objetivo del vehículo, en píxeles.
   target_side_range: [32, 256]
+  # Límite de ampliación permitido; null significa sin límite explícito.
   max_upscale: null
 vehicle:
+  # Probabilidad de voltear horizontalmente el vehículo.
   horizontal_flip_probability: 0.5
+  # Tamaño mínimo del gradiente aplicado, en píxeles.
   gradient_min_px: 5
+  # Tamaño máximo del gradiente aplicado, en píxeles.
   gradient_max_px: 10
+  # Fracción del lado usada por el gradiente.
   gradient_side_fraction: 0.15
+  # Indica si el gradiente usa una transición smoothstep.
   gradient_smoothstep: false
 options:
+  # Activa la adición de ruido al fondo.
   background_noise: false
+  # Desviación estándar del ruido del fondo.
   noise_sigma: 4.0
+  # Activa la compresión JPEG del fondo.
   background_jpeg: false
+  # Calidad usada para la compresión JPEG.
   jpeg_quality: 75
+  # Activa ajustes de brillo y contraste en toda la imagen.
   full_image_brightness_contrast: false
+  # Factor multiplicador del brillo.
   brightness_factor: 1.0
+  # Factor multiplicador del contraste.
   contrast_factor: 1.0
 output:
+  # Directorio donde se guardarán las imágenes sintéticas generadas.
   root: data/synthetic
+

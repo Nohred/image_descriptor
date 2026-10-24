@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import argparse
 import json
 import sys
 from collections import Counter
@@ -14,6 +13,11 @@ import yaml
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from src.datasets.veri import load_veri_records
+
+
+# Configuración editable.
+CONFIG_PATH = "configs/synthetic.yaml"
+OUTPUT_DIR = "artifacts/dataset_stats"
 
 
 def _percentiles(values: list[float]) -> dict[str, float]:
@@ -31,12 +35,8 @@ def _write_tex(path: Path, title: str, rows: dict[str, object]) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--config", default="configs/synthetic.yaml")
-    parser.add_argument("--output", default="artifacts/dataset_stats")
-    args = parser.parse_args()
-    config = yaml.safe_load(Path(args.config).read_text(encoding="utf-8"))
-    output = Path(args.output)
+    config = yaml.safe_load(Path(CONFIG_PATH).read_text(encoding="utf-8"))
+    output = Path(OUTPUT_DIR)
     output.mkdir(parents=True, exist_ok=True)
     records = load_veri_records(config["veri_root"])
     veri = {}

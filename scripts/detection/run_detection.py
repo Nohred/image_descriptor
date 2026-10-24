@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 """Ejecuta YOLO26 (n y/o s) sobre el dataset sintetico y evalua.
 
-Ejemplo:
-    python scripts/run_detection.py --models n s --data-variants matched control
+Modifica las variables de configuracion de este archivo antes de ejecutar:
+    python scripts/run_detection.py
 """
 from __future__ import annotations
 
-import argparse
 import sys
 from pathlib import Path
 
@@ -17,6 +16,20 @@ from src.evaluation.detection_eval import evaluate_synthetic, save_report  # noq
 
 COLUMNS = ["detection_rate", "recall@0.5", "recall@0.75", "mean_iou_all",
            "AP50", "mAP50-95", "extra_detections_mean", "inference_ms_mean"]
+
+# Configuracion editable.
+MODELS = ["n", "s"]  # Opciones: ["n"], ["s"] o ["n", "s"].
+DATA_VARIANTS = ["matched", "control"]  # Opciones: ["matched"], ["control"] o ambas.
+DATA_ROOT = "data/synthetic"
+OUTPUT_DIR = "artifacts/detection"
+WEIGHTS = None  # Ruta a pesos propios; requiere seleccionar un solo modelo.
+MIN_CONF = 0.25  # Confianza minima usada para evaluar una deteccion.
+CONF_FLOOR = 0.05  # Umbral inferior de confianza para curvas y metricas.
+IMAGE_SIZE = 640  # Tamano de entrada de YOLO en pixeles.
+BATCH_SIZE = 16
+DEVICE = None  # Opciones: None (automatico), "cpu", "0" o "cuda:0".
+LIMIT = None  # Numero maximo de imagenes; None procesa todo el dataset.
+NMS_FREE = False  # True desactiva la supresion no maxima durante la evaluacion.
 
 
 def run(models=("n", "s"), data_variants=("matched", "control"), root="data/synthetic",
@@ -44,25 +57,22 @@ def print_table(reports: list[dict]) -> None:
 
 
 def main() -> None:
-    p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--models", nargs="+", default=["n", "s"], choices=["n", "s"])
-    p.add_argument("--data-variants", nargs="+", default=["matched", "control"])
-    p.add_argument("--root", default="data/synthetic")
-    p.add_argument("--out", default="artifacts/detection")
-    p.add_argument("--weights", default=None, help="pesos propios (solo con un modelo)")
-    p.add_argument("--min-conf", type=float, default=0.25)
-    p.add_argument("--conf-floor", type=float, default=0.05)
-    p.add_argument("--imgsz", type=int, default=640)
-    p.add_argument("--batch", type=int, default=16)
-    p.add_argument("--device", default=None)
-    p.add_argument("--limit", type=int, default=None)
-    p.add_argument("--nms-free", action="store_true")
-    a = p.parse_args()
-    if a.weights and len(a.models) != 1:
-        p.error("--weights requiere un solo valor en --models")
-    reports = run(a.models, a.data_variants, a.root, a.out, a.weights,
-                  min_conf=a.min_conf, conf_floor=a.conf_floor, imgsz=a.imgsz,
-                  batch=a.batch, device=a.device, limit=a.limit, nms_free=a.nms_free)
+    if WEIGHTS and len(MODELS) != 1:
+        raise ValueError("WEIGHTS requiere seleccionar un solo modelo en MODELS")
+    reports = run(
+        MODELS,
+        DATA_VARIANTS,
+        DATA_ROOT,
+        OUTPUT_DIR,
+        WEIGHTS,
+        min_conf=MIN_CONF,
+        conf_floor=CONF_FLOOR,
+        imgsz=IMAGE_SIZE,
+        batch=BATCH_SIZE,
+        device=DEVICE,
+        limit=LIMIT,
+        nms_free=NMS_FREE,
+    )
     print_table(reports)
 
 

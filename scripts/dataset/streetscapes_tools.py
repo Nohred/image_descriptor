@@ -6,9 +6,9 @@ Subcomandos:
   select  : filtra los CSV y escribe selected.csv (uuid, source, orig_id, ...)
   verify  : revisa las imagenes descargadas y escribe downloaded.csv
 """
-import argparse
 import math
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 import pandas as pd
@@ -20,6 +20,33 @@ CTX_COLS = ["platform", "weather", "view_direction", "lighting_condition",
 DEFAULT_FILTERS = ["lighting_condition~day", "quality~good", "platform~driving"]
 VEHICLE_COLS = ["Bus", "Car", "Caravan", "Motorcycle", "Other-Vehicle",
                 "Trailer", "Truck"]
+
+# Configuración editable.
+# Elige una operación: "inspect", "select" o "verify".
+COMMAND = "select"
+
+# Configuración de inspect.
+INSPECT_CSV_DIR = "data/raw/streetscapes/csv"
+INSPECT_ROWS = 1_000_000
+
+# Configuración de select.
+SELECT_CSV_DIR = "data/raw/streetscapes/csv"
+SELECT_OUTPUT = "data/raw/streetscapes/selected.csv"
+SELECT_N = 2000
+SELECT_OVERSAMPLE = 1.25
+SELECT_SEED = 0
+SELECT_CANDIDATE_FRAC = 0.01
+SELECT_MIN_SHORT_SIDE = 640
+SELECT_FILTERS = []  # Ejemplo: ["weather~clear", "projection_type~perspective"].
+SELECT_NO_DEFAULTS = False  # True usa únicamente SELECT_FILTERS.
+SELECT_MAX_VEHICLE_SHARE = None  # None no usa segmentation.csv.
+
+# Configuración de verify.
+VERIFY_SELECTED = "data/raw/streetscapes/selected.csv"
+VERIFY_IMAGES = "data/raw/streetscapes/images"
+VERIFY_OUTPUT = "data/raw/streetscapes/downloaded.csv"
+VERIFY_KEEP = 2000
+VERIFY_MIN_SHORT_SIDE = 640
 
 
 def read_chunks(path, usecols):
@@ -151,39 +178,34 @@ def cmd_verify(a):
 
 
 def main():
-    p = argparse.ArgumentParser(description=__doc__)
-    sub = p.add_subparsers(dest="cmd", required=True)
-
-    s = sub.add_parser("inspect")
-    s.add_argument("--csv-dir", default="data/raw/streetscapes/csv")
-    s.add_argument("--rows", type=int, default=1_000_000)
-    s.set_defaults(fn=cmd_inspect)
-
-    s = sub.add_parser("select")
-    s.add_argument("--csv-dir", default="data/raw/streetscapes/csv")
-    s.add_argument("--out", default="data/raw/streetscapes/selected.csv")
-    s.add_argument("--n", type=int, default=2000)
-    s.add_argument("--oversample", type=float, default=1.25)
-    s.add_argument("--seed", type=int, default=0)
-    s.add_argument("--candidate-frac", type=float, default=0.01)
-    s.add_argument("--min-short-side", type=int, default=640)
-    s.add_argument("--filter", action="append", default=[],
-                   help="columna~texto sobre contextual.csv (repetible)")
-    s.add_argument("--no-defaults", action="store_true")
-    s.add_argument("--max-vehicle-share", type=float, default=None,
-                   help="usa segmentation.csv (opcional, ~3.7 GB)")
-    s.set_defaults(fn=cmd_select)
-
-    s = sub.add_parser("verify")
-    s.add_argument("--selected", default="data/raw/streetscapes/selected.csv")
-    s.add_argument("--images", default="data/raw/streetscapes/images")
-    s.add_argument("--out", default="data/raw/streetscapes/downloaded.csv")
-    s.add_argument("--keep", type=int, default=2000)
-    s.add_argument("--min-short-side", type=int, default=640)
-    s.set_defaults(fn=cmd_verify)
-
-    a = p.parse_args()
-    a.fn(a)
+    if COMMAND == "inspect":
+        args = SimpleNamespace(csv_dir=INSPECT_CSV_DIR, rows=INSPECT_ROWS)
+        cmd_inspect(args)
+    elif COMMAND == "select":
+        args = SimpleNamespace(
+            csv_dir=SELECT_CSV_DIR,
+            out=SELECT_OUTPUT,
+            n=SELECT_N,
+            oversample=SELECT_OVERSAMPLE,
+            seed=SELECT_SEED,
+            candidate_frac=SELECT_CANDIDATE_FRAC,
+            min_short_side=SELECT_MIN_SHORT_SIDE,
+            filter=SELECT_FILTERS,
+            no_defaults=SELECT_NO_DEFAULTS,
+            max_vehicle_share=SELECT_MAX_VEHICLE_SHARE,
+        )
+        cmd_select(args)
+    elif COMMAND == "verify":
+        args = SimpleNamespace(
+            selected=VERIFY_SELECTED,
+            images=VERIFY_IMAGES,
+            out=VERIFY_OUTPUT,
+            keep=VERIFY_KEEP,
+            min_short_side=VERIFY_MIN_SHORT_SIDE,
+        )
+        cmd_verify(args)
+    else:
+        raise ValueError("COMMAND debe ser 'inspect', 'select' o 'verify'")
 
 
 if __name__ == "__main__":
