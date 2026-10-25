@@ -51,9 +51,9 @@ def evaluar_modelo(backbone='efficientnet_b0', batch_size=32):
     print(f"\n[*] Evaluando modelo: {backbone} en {device}")
     
     train_csv = "data/train_features.csv"
-    train_dir = "/home/ulises-calderon/Projects/ImageDescriptorsv2/VeRi/image_train"
+    train_dir = "/home/ulises-calderon/Projects/ImageDescriptors/VeRi/image_train"
     test_csv = "data/test_features.csv"
-    test_dir = "/home/ulises-calderon/Projects/ImageDescriptorsv2/VeRi/image_test"
+    test_dir = "/home/ulises-calderon/Projects/ImageDescriptors/VeRi/image_test"
 
     _, _, test_loader = get_dataloaders(
         train_csv, train_dir, test_csv, test_dir, batch_size=batch_size
@@ -142,5 +142,5 @@ def evaluar_modelo(backbone='efficientnet_b0', batch_size=32):
 
 
 if __name__ == "__main__":
-    # evaluar_modelo(backbone='efficientnet_b0', batch_size=32)
-    evaluar_modelo(backbone='mobilenet_v3_small', batch_size=32)
+    evaluar_modelo(backbone='efficientnet_b0', batch_size=32)
+    # evaluar_modelo(backbone='mobilenet_v3_small', batch_size=32)

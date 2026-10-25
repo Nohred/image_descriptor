@@ -1,0 +1,21 @@
+imageName,model,evaluation
+0698_c014_00049240_0.jpg,qwen,Falso Positivo (Alucinacion)
+0676_c005_00013190_0.jpg,qwen,Falso Positivo (Alucinacion)
+0576_c013_00075885_0.jpg,qwen,Falso Negativo (Ceguera)
+0392_c012_00027770_0.jpg,qwen,Falso Positivo (Alucinacion)
+0113_c010_00076745_1.jpg,qwen,Perfecto
+0685_c008_00025220_0.jpg,qwen,Perfecto
+0074_c004_00001740_0.jpg,qwen,Perfecto
+0294_c007_00061840_1.jpg,qwen,Falso Positivo (Alucinacion)
+0134_c011_00061730_0.jpg,qwen,Falso Positivo (Alucinacion)
+0570_c009_00069970_0.jpg,qwen,Falso Positivo (Alucinacion)
+0597_c003_00065295_0.jpg,qwen,Falso Positivo (Alucinacion)
+0770_c012_00033125_0.jpg,qwen,Falso Positivo (Alucinacion)
+0365_c001_00026510_0.jpg,qwen,Falso Positivo (Alucinacion)
+0332_c017_00013685_0.jpg,qwen,Falso Positivo (Alucinacion)
+0113_c012_00081285_0.jpg,qwen,Falso Positivo (Alucinacion)
+0402_c004_00055935_0.jpg,qwen,Falso Positivo (Alucinacion)
+0172_c003_00078165_0.jpg,qwen,Falso Positivo (Alucinacion)
+0753_c008_00047685_0.jpg,qwen,Perfecto
+0446_c006_00069235_0.jpg,qwen,Perfecto
+0404_c016_00044795_0.jpg,qwen,Falso Negativo (Ceguera)

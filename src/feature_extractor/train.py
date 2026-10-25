@@ -8,16 +8,16 @@ import numpy as np
 # Importar tus módulos
 from dataset import get_dataloaders
 from models import MultiTaskVehicleNet
-from plotting import plot_training_history  # <-- NUEVO IMPORT
+from utils.plotting import plot_training_history  # <-- NUEVO IMPORT
 
 def entrenar_modelo(epochs=10, batch_size=32, lr=0.001, backbone='efficientnet_b0'):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"[*] Entrenando en: {device}")
     
     train_csv = "data/train_features.csv"
-    train_dir = "/home/ulises-calderon/Projects/ImageDescriptorsv2/VeRi/image_train"
+    train_dir = "/home/ulises-calderon/Projects/ImageDescriptors/VeRi/image_train"
     test_csv = "data/test_features.csv"
-    test_dir = "/home/ulises-calderon/Projects/ImageDescriptorsv2/VeRi/image_test"
+    test_dir = "/home/ulises-calderon/Projects/ImageDescriptors/VeRi/image_test"
 
     print("[*] Cargando DataLoaders...")
     train_loader, val_loader, _test_loader = get_dataloaders(

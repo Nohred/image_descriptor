@@ -10,12 +10,16 @@ dependencies:
       - torch==2.6.0+cu124
       - torchvision==0.21.0+cu124
       - torchaudio==2.6.0+cu124
-      - transformers==4.47.1
+      - transformers==4.51.3
+      - peft==0.21.2
       - accelerate==1.2.1
       - qwen-vl-utils==0.0.14
       - einops
       - numpy==2.2.6
       - Pillow==12.1.1
       - tqdm==4.67.3
+      - opencv-python==5.0.0
+      - lmdb==3.0.0
+      - decord==0.6.0
 
 # python -m pip install --no-deps --force-reinstall "bitsandbytes==0.45.3"
