@@ -76,9 +76,6 @@ def get_dataloaders(
         T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
 
-    if not 0 < val_split < 1:
-        raise ValueError("val_split debe estar entre 0 y 1.")
-
     # Se crean datasets separados para que validación no use augmentation.
     train_dataset = VeRiDataset(csv_file=train_csv, img_dir=train_dir, transform=train_transform)
     val_dataset = VeRiDataset(csv_file=train_csv, img_dir=train_dir, transform=test_transform)

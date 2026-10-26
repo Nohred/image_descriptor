@@ -61,6 +61,7 @@ htmlcov/
 .venv/
 venv/
 env/
+src/feature_generator/auditor/
 
 ### IDE y sistema
 .idea/
