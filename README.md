@@ -147,6 +147,22 @@ estén disponibles en el entorno activo.
 - El primer uso de Florence-2 o Qwen-VL descarga los modelos desde Hugging
   Face y requiere conexión a Internet y suficiente VRAM/disco.
 
+## Aplicación web local
+
+La interfaz web reutiliza `retrieval.service.SearchService` y las bases de datos
+locales existentes. Iníciela desde la raíz del repositorio:
+
+```bash
+python web_app.py
+```
+
+Después abra `http://127.0.0.1:8765/`. La interfaz permite cambiar entre
+`fixed`, `semantic` y `hybrid`, indicar el límite de resultados y ver los
+descriptores junto a cada imagen. La API `POST /api/search` recibe
+`{"query": "...", "mode": "fixed", "limit": 20}`. Si Ollama, una base o un
+modelo no están disponibles, la aplicación sigue arrancando y devuelve un
+mensaje explícito para el modo afectado.
+
 ## Documentación por módulo
 
 - [Dataset sintético](src/dataset/README.md)

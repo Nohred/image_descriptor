@@ -86,13 +86,16 @@ def validate(raw):
 
 
 def parse_query(query, chat_fn, today=None):
-    """chat_fn(system_prompt, user_text, json_schema) -> str con JSON."""
+    """Convierte la respuesta JSON del cliente de chat en un ParsedQuery."""
     today = today or date.today().isoformat()
     system = build_system_prompt(COLOR_NAMES, TYPE_NAMES, PERIODS, COLOR_ALIASES, TYPE_ALIASES, today)
     schema = build_output_schema(COLOR_NAMES, TYPE_NAMES)
-    text = chat_fn(system, query, schema)
-    try:
-        raw = json.loads(text)
-    except (json.JSONDecodeError, TypeError) as error:
-        raise QueryParseError(f"El LLM no devolvio JSON valido: {error}") from error
+    response = chat_fn(system, query, schema)
+    if isinstance(response, dict):
+        raw = response
+    else:
+        try:
+            raw = json.loads(response)
+        except (json.JSONDecodeError, TypeError) as error:
+            raise QueryParseError(f"El LLM no devolvio JSON valido: {error}") from error
     return validate(raw)

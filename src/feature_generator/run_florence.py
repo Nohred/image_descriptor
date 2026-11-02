@@ -97,4 +97,4 @@ if __name__ == "__main__":
     test_directory = "/home/ulises-calderon/Projects/ImageDescriptors/VeRi/image_test" 
     
     # Ejecutamos con 20 imágenes para medir velocidad real en tu PC
-    process_dataset_florence(test_directory, num_images=20)
+    process_dataset_florence(test_directory, num_images=11_000)
