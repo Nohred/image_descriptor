@@ -22,3 +22,7 @@ dependencies:
       - matplotlib==3.8.2
       - seaborn==0.12.3
       - streamlit==1.30.0
+      - ollama
+      - pydantic
+      - sqlite-vec
+
