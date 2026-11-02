@@ -89,6 +89,12 @@ python evaluate.py
 La evaluación necesita que los CSV contengan las etiquetas reales esperadas por
 el script. Genera reportes de clasificación y figuras de matriz de confusión.
 
+Para alimentar la búsqueda semántica, el resultado textual de Florence se
+convierte después en embeddings mediante
+[`src/database/generated_features/build_embeddings.py`](../database/README.md).
+Ese paso produce la base SQLite consultada por los modos `semantic` e
+`hybrid`.
+
 ## Flujo de datos
 
 ```text

@@ -2,8 +2,8 @@
 
 Pipeline de visión por computador para describir vehículos en imágenes de
 vigilancia. El repositorio combina datos reales de **VeRi**, fondos de calles,
-generación de imágenes sintéticas, detección de vehículos y clasificación de
-atributos visuales.
+generación de imágenes sintéticas, detección de vehículos, clasificación de
+atributos visuales y búsqueda multimodal local.
 
 ## Qué hace el proyecto
 
@@ -19,9 +19,16 @@ El flujo completo está dividido en cuatro etapas:
 4. **Extracción/clasificación supervisada** (`src/feature_extractor/`): entrena
    una red multitarea con backbone EfficientNet-B0 o MobileNetV3-Small para
    clasificar color y tipo a partir de VeRi.
+5. **Persistencia** (`src/database/`): construye una base SQLite de atributos
+   fijos y otra de descripciones/embeddings generados.
+6. **Búsqueda** (`src/retrieval/` y `src/local_llm/`): interpreta consultas en
+   español con un LLM local, aplica filtros SQL, similitud semántica o ambas.
+7. **Aplicación web** (`web_app.py` y `web/`): ofrece una interfaz local para
+   consultar las imágenes y comparar los modos de recuperación.
 
 El objetivo es comparar descriptores generados por modelos multimodales con un
-clasificador supervisado y usar YOLO como etapa de localización.
+clasificador supervisado, usar YOLO como etapa de localización y habilitar
+búsqueda por atributos y lenguaje natural.
 
 ## Estructura
 
@@ -34,7 +41,12 @@ clasificador supervisado y usar YOLO como etapa de localización.
 │   ├── dataset/                  # Construcción de imágenes y etiquetas sintéticas
 │   ├── Yolo/                     # Fine-tuning, inferencia y métricas
 │   ├── feature_generator/        # Florence-2, Qwen-VL y normalización de respuestas
-│   └── feature_extractor/        # Clasificador multitarea supervisado
+│   ├── feature_extractor/        # Clasificador multitarea supervisado
+│   ├── database/                 # SQLite de atributos y embeddings
+│   ├── local_llm/                # Cliente Ollama, prompts y embeddings
+│   └── retrieval/                # Búsqueda fixed, semantic e hybrid
+├── web/                          # Frontend estático de la aplicación local
+├── web_app.py                    # Servidor HTTP y API de búsqueda
 ├── env_florence.yml
 └── env_qwen.yml
 ```
@@ -122,11 +134,48 @@ cd src/feature_extractor
 python train.py
 python evaluation.py
 cd ../..
+
+# 5. Construir la base de atributos fijos
+python src/database/fixed_features/add_timestamps.py
+python src/database/fixed_features/build_database.py
+
+# 6. Construir embeddings de las descripciones de Florence
+# Requiere Ollama y florence_results.json ya generado
+ollama pull nomic-embed-text-v2-moe
+python src/database/generated_features/build_embeddings.py
+
+# 7. Abrir la aplicación de búsqueda
+python web_app.py
 ```
 
 `run_all.sh` ejecuta el benchmark de Florence y Qwen de forma consecutiva,
 pero debe lanzarse desde `src/feature_generator` y requiere que ambos modelos
 estén disponibles en el entorno activo.
+
+## Búsqueda por lenguaje natural
+
+La aplicación ofrece tres modos:
+
+- `fixed`: el modelo `qwen2.5:3b` convierte la consulta en filtros de color,
+  tipo, exclusiones, fecha y hora; después se consulta SQLite.
+- `semantic`: la consulta completa se convierte en un embedding con
+  `nomic-embed-text-v2-moe` y se ordenan las descripciones de Florence por
+  similitud coseno.
+- `hybrid`: combina filtros estructurados con el ranking semántico residual.
+
+Los modelos locales se sirven con Ollama:
+
+```bash
+ollama serve
+ollama pull qwen2.5:3b
+ollama pull nomic-embed-text-v2-moe
+python -m pip install ollama numpy
+```
+
+La base de embeddings se genera incrementalmente y almacena variantes `full` y
+`sentences`. Para más detalles consulte la documentación de [database](src/database/README.md),
+[local_llm](src/local_llm/README.md), [retrieval](src/retrieval/README.md) y
+[la aplicación web](src/web/README.md).
 
 ## Notas importantes
 
@@ -169,3 +218,7 @@ mensaje explícito para el modo afectado.
 - [Detección YOLO](src/Yolo/README.md)
 - [Generación con Florence-2 y Qwen-VL](src/feature_generator/README.md)
 - [Extractor/clasificador supervisado](src/feature_extractor/README.md)
+- [Bases de datos](src/database/README.md)
+- [LLM local y embeddings](src/local_llm/README.md)
+- [Recuperación y búsqueda](src/retrieval/README.md)
+- [Aplicación web](src/web/README.md)
