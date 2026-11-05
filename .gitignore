@@ -1,5 +1,8 @@
 ### Datasets (mantener la estructura con .gitkeep, ignorar contenido)
 
+# Florence sql db
+src/database/generated_features/data
+
 # Streetscapes
 **/streetscapes/*
 !**/streetscapes/.gitkeep
