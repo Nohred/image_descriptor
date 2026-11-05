@@ -78,3 +78,6 @@ Thumbs.db
 *.log
 *.tmp
 *.temp
+
+# Informe técnico local (fuente LaTeX, auxiliares y PDF)
+/technical_report/
