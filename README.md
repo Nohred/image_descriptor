@@ -5,7 +5,7 @@ vigilancia. El repositorio combina datos reales de **VeRi**, fondos de calles,
 generación de imágenes sintéticas, detección de vehículos, clasificación de
 atributos visuales y búsqueda multimodal local.
 
-![demo](demo.png)
+![demo](web/demo.png)
 
 
 ## Qué hace el proyecto
